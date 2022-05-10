@@ -237,4 +237,4 @@ END {
 
 # Cleanup testing environment
 timeout $timeout ./_test/"$script" cleanup
-# rm -f results.txt check_source_result.txt $REF_FILE
+rm -f results.txt check_source_result.txt $REF_FILE

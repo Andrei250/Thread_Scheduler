@@ -88,37 +88,33 @@ void removeTop()
 int chooseThread()
 {
 	my_thread *thr = scheduler.queue[0];
+	my_thread *current = scheduler.currentThread;
 
-	if (scheduler.currentThread == NULL) {
-		removeTop();
-		return 1;
-	} else {
-		if (scheduler.currentThread->status == WAITING ||
-			scheduler.currentThread->status == TERMINATED) {
-				removeTop();
-				return 1;
-			}
-
-		if (scheduler.currentThread->priority < thr->priority ||
-			(scheduler.currentThread->priority == thr->priority &&
-			scheduler.currentThread->runningTime <= 0)) {
-			my_thread *current = scheduler.currentThread;
-
+	if (current->status == WAITING ||
+		current->status == TERMINATED) {
 			removeTop();
-			updateQueue(current);
-			
 			return 1;
 		}
+
+	if (current->priority < thr->priority ||
+		(current->priority == thr->priority &&
+		current->runningTime <= 0)) {
+		removeTop();
+		updateQueue(current);
+		
+		return 1;
 	}
 	
 	return 0;
 }
 
 void runCurrentThread() {
-	scheduler.currentThread->runningTime = scheduler.time;
-	scheduler.currentThread->status = RUNNING;
+	my_thread *thr = scheduler.currentThread;
 
-	int rc = sem_post(&scheduler.currentThread->alarm);
+	thr->runningTime = scheduler.time;
+	thr->status = RUNNING;
+
+	int rc = sem_post(&thr->alarm);
 	DIE(rc < 0, "Error on waking up thread");
 }
 
@@ -218,10 +214,12 @@ int so_signal(unsigned int io)
 
 void so_exec(void)
 {
-	scheduler.currentThread->runningTime--;
+	my_thread *runningThread = scheduler.currentThread;
+
+	runningThread->runningTime--;
 	schedule();
 
-	int rc = sem_wait(&scheduler.currentThread->alarm);
+	int rc = sem_wait(&runningThread->alarm);
 	DIE(rc < 0, "Error on puting thread in waiting state");
 }
 
@@ -234,7 +232,7 @@ void so_end(void)
 	unsigned int i = 0;
 	int rc;
 
-	for (; i < scheduler.thrNo; ++i) {
+	for (i = 0; i < scheduler.thrNo; ++i) {
 		rc = pthread_join(scheduler.threads[i]->id, NULL);
 		DIE(rc < 0, "Can't join threads");
 
