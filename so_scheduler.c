@@ -30,8 +30,7 @@
 	} while (0)
 
 // Structura pnetru a defini un thread
-typedef struct
-{
+typedef struct {
 	so_handler *handler;
 	int priority;
 	int status;
@@ -42,8 +41,7 @@ typedef struct
 } my_thread;
 
 // Structura pentru a defini Scheduler-ul
-typedef struct
-{
+typedef struct {
 	unsigned int time;
 	unsigned int io;
 	unsigned short init;

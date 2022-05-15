@@ -1,50 +1,40 @@
-#
-#  4 - Thread Scheduler (Linux)
-#
-#  2017, Operating Systems
-#
+Dumitrescu Andrei 333CC
 
-# Archive:
+Structuri necesare:
 
-> Makefile.checker
-> README
-> run_all.sh
-> _test/
-	> run_test,c
-	> run_test.h
-	> scheduler_test.h
-	> so_scheduler.h
-	> test_exec.c
-	> test_io.c
-	> test_sched.c
+- my_thread => structura in care tin datele despre thread-uri, cum ar fi
+				handler-ul, prioritatea, status, cat timp ruleaza, un semafor
+				care il pune in waiting pentur a putea rula, IO-ul necesar
+				pentru a fi repornit din WAITING.
 
-# Build:
+- so_scheduler => structura care defineste scheduler-ul cu lista de thread-uri,
+					thread-ul curent, coada si variabile care definesc cuanta
+					de timp, verificarea scheduler-ului daca a fost deja
+					initializat, numarul de elemente IO.
 
-The local directory must contain the thread scheduler library
-(libscheduler.so). Use the Makefile.checker to properly build the run_test
-executable:
 
-	make -f Makefile.checker
-
-This command will also run all tests and print out the results.
-
-# Run:
-
-In order to run the test suite you can either use the run_all.sh script or
-the run_test executable. The loader must be able to locate the library
-(libscheduler.so) (use LD_LIBRARY_PATH).
-
-The run_all.sh script runs all tests and computes assignment grade (95 points
-maximum):
-
-	LD_LIBRARY_PATH=. ./run_all.sh
-
-In order to run a specific test, pass the test number (1 .. 20) to the run_test
-executable:
-
-	LD_LIBRARY_PATH=. ./_test/run_test 1
-
-# Debug:
-
-For debugging, define the SO_VERBOSE_ERROR symbol.
-
+Implementare:
+	- am implementat toate functiile.
+	- am folosit semafoare pentru a pune thread-urile in asteptare pana cand
+		primesc sem_post pentru a rula urmatoarea comanda.
+	- fiecare thread are semaforul sau.
+	- flow-ul ar fi urmatorul:
+		- initializez scheduler-ul
+		- pornesti un nou thread si initializezi semaforul pentru el
+		- il bagi in coada si in lista de thread-uri
+		- thread-ul se pune in wait folosind semaforul si va iesi din aceasta
+		   stare cand va primi sem_post de la scheduler.
+		- daca va iesi din wait, va rula handler-ul si se va schimba in
+			TERMIANTED
+		- tot in fork, verific daca thread-ul curent e diferit de NULL. Daca
+			e null, atunci caut un thread valid de a rula. In alt caz, rulez
+			so_exec.
+		- Pentru a da schedule, verific daca mai sunt thread-uri in lista.
+		- Daca mai sunt thread-uri mai bune dpdv al prioritatii, atunci ii fac
+			update. La final rulez thread-ul si il trec in starea RUNNING.
+		- Daca primeste thread-ul curent un semnal de wait, atunci
+			atunci fac update la status si la thread-ul care va rula.
+		- La so_signal trezesc toate thread-urile din WAITING cu semnalul io
+		- La so_exec doar scad timpul si caut un alt thread daca este mai bun
+		- La so_end dealoc memoria si inchid thread-urile.
+		
