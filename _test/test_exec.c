@@ -25,7 +25,8 @@ static void test_sched_handler_12(unsigned int dummy)
 
 	test_exec_tid = get_tid();
 
-	for (i = 0; i < test_exec_nr; i++) {
+	for (i = 0; i < test_exec_nr; i++)
+	{
 		if (!this_tid(test_exec_tid))
 			so_fail("other task id");
 		so_exec();
@@ -63,14 +64,15 @@ static tid_t test_exec_last_tid;
 static tid_t test_tid_13_1;
 static tid_t test_tid_13_2;
 
-#define SO_TEST_AND_SET(expect_id, new_id) \
-	do { \
-		if (equal_tids((expect_id), INVALID_TID) || \
-				equal_tids((new_id), INVALID_TID)) \
-			so_fail("invalid task id"); \
+#define SO_TEST_AND_SET(expect_id, new_id)                \
+	do                                                    \
+	{                                                     \
+		if (equal_tids((expect_id), INVALID_TID) ||       \
+			equal_tids((new_id), INVALID_TID))            \
+			so_fail("invalid task id");                   \
 		if (!equal_tids(test_exec_last_tid, (expect_id))) \
-			so_fail("invalid tasks order"); \
-		test_exec_last_tid = (new_id); \
+			so_fail("invalid tasks order");               \
+		test_exec_last_tid = (new_id);                    \
 	} while (0)
 
 static void test_sched_handler_13_2(unsigned int dummy)
@@ -231,13 +233,15 @@ void test_sched_14(void)
 static unsigned int test_exec_last_priority;
 
 /* fails if the last priority set is not prio */
-#define SO_FAIL_IF_NOT_PRIO(prio, msg) \
-	do { \
-		if ((prio) != test_exec_last_priority) { \
-			test_exec_status = SO_TEST_FAIL; \
-			so_fail(msg); \
-		} \
-		test_exec_last_priority = priority; \
+#define SO_FAIL_IF_NOT_PRIO(prio, msg)         \
+	do                                         \
+	{                                          \
+		if ((prio) != test_exec_last_priority) \
+		{                                      \
+			test_exec_status = SO_TEST_FAIL;   \
+			so_fail(msg);                      \
+		}                                      \
+		test_exec_last_priority = priority;    \
 	} while (0)
 
 /*
@@ -250,11 +254,12 @@ static unsigned int test_exec_last_priority;
  */
 static void test_sched_handler_15(unsigned int priority)
 {
-	switch (priority) {
+	switch (priority)
+	{
 	case 1:
 		/* test if I was scheduled before P2 */
 		SO_FAIL_IF_NOT_PRIO(2,
-			"scheduled a test with a bogus priority");
+							"scheduled a test with a bogus priority");
 		break;
 
 	case 2:
@@ -272,7 +277,7 @@ static void test_sched_handler_15(unsigned int priority)
 
 		/* P1 < P3 - I still have to run */
 		SO_FAIL_IF_NOT_PRIO(3,
-			"somebody else was scheduled instead of task 3");
+							"somebody else was scheduled instead of task 3");
 		break;
 
 	case 4:
@@ -283,7 +288,7 @@ static void test_sched_handler_15(unsigned int priority)
 
 		/* I shouldn't have been preempted */
 		SO_FAIL_IF_NOT_PRIO(4,
-			"somebody else was scheduled instead of task 4");
+							"somebody else was scheduled instead of task 4");
 		break;
 	}
 
@@ -310,7 +315,8 @@ void test_sched_15(void)
  * Structures and variables needed for the next tests
  */
 
-struct so_task_info_t {
+struct so_task_info_t
+{
 	unsigned int creation_time;
 	unsigned int priority;
 	unsigned int executed;
@@ -363,9 +369,10 @@ static void test_sched_generic_check(void)
 		total_exec_time += tasks_info[idx].executed;
 
 	if (total_exec_time > SO_MAX_EXECUTION_TIME ||
-			total_exec_time != exec_time ||
-			(exec_time == SO_MAX_EXECUTION_TIME &&
-			 test_exec_status != SO_TEST_SUCCESS)) {
+		total_exec_time != exec_time ||
+		(exec_time == SO_MAX_EXECUTION_TIME &&
+		 test_exec_status != SO_TEST_SUCCESS))
+	{
 		so_fail("total execution time mismatch");
 	}
 
@@ -373,18 +380,20 @@ static void test_sched_generic_check(void)
 	memset(priority_stats, 0, sizeof(priority_stats));
 
 	/* for each time unit elapsed */
-	for (idx = 0; idx < exec_time; idx++) {
+	for (idx = 0; idx < exec_time; idx++)
+	{
 		current_task = tasks_history[idx];
 
 		/* if I wasn't the last task, then I was preempted */
-		if (last_task != current_task) {
+		if (last_task != current_task)
+		{
 			/* if they have the same priority */
 			if (last_task && last_task->executed != 0 &&
 				current_task->creation_time != idx &&
 				last_task->priority == current_task->priority &&
 				last_task->runtime != quantum)
 				so_fail("previous task did not complete it's "
-					"quantum");
+						"quantum");
 			last_task = current_task;
 			current_task->runtime = 0;
 		}
@@ -404,10 +413,13 @@ static void test_sched_generic_check(void)
 		current_task->runtime++;
 
 		/* if nothing more to execute -> leave */
-		if (current_task->executed == 0) {
+		if (current_task->executed == 0)
+		{
 			priority_stats[current_task->priority]--;
-		} else if (priority_stats[current_task->priority] > 1 &&
-				current_task->runtime > quantum) {
+		}
+		else if (priority_stats[current_task->priority] > 1 &&
+				 current_task->runtime > quantum)
+		{
 			so_fail("task was not preempted");
 		}
 	}
@@ -429,14 +441,16 @@ static void test_sched_handler(unsigned int priority)
 	my_info->executed++;
 	tasks_history[exec_time++] = my_info;
 
-	if (exec_time == 0) {
+	if (exec_time == 0)
+	{
 		/* If the first task spawn other 3 tasks */
 		for (i = 0; i < 3; i++)
 			so_fork(test_sched_handler, priority);
 	}
 
-	for (i = 0; i < SO_MAX_UNITS / 2; i++) {
-	/* Run only half of the allowed quantum */
+	for (i = 0; i < SO_MAX_UNITS / 2; i++)
+	{
+		/* Run only half of the allowed quantum */
 		my_info->executed++;
 		tasks_history[exec_time++] = my_info;
 		so_exec();
@@ -534,7 +548,8 @@ static void test_sched_handler_18(unsigned int priority)
 	/* get a rand number of iterations to do */
 	rand_iterations = get_rand(1, SO_MAX_UNITS);
 
-	while (rand_iterations-- && exec_time < SO_MAX_EXECUTION_TIME) {
+	while (rand_iterations-- && exec_time < SO_MAX_EXECUTION_TIME)
+	{
 
 		/* fill in history */
 		my_info->executed++;
@@ -545,12 +560,15 @@ static void test_sched_handler_18(unsigned int priority)
 		 * if it was executed previously, then we offer random
 		 * chances to execute either fork or exec
 		 */
-		if ((!executed_fork && rand_iterations == 0) || rand() % 2) {
+		if ((!executed_fork && rand_iterations == 0) || rand() % 2)
+		{
 			/* create new task with random priority */
 			so_fork(test_sched_handler_18,
-				get_rand(0, SO_MAX_PRIO));
+					get_rand(0, SO_MAX_PRIO));
 			executed_fork = 1;
-		} else {
+		}
+		else
+		{
 			so_exec();
 		}
 	}

@@ -1,33 +1,33 @@
-==280213== Memcheck, a memory error detector
-==280213== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
-==280213== Using Valgrind-3.15.0 and LibVEX; rerun with -h for copyright info
-==280213== Command: ./_test/run_test 20
-==280213== Parent PID: 280212
-==280213== 
-==280213== Thread 5:
-==280213== Invalid read of size 4
-==280213==    at 0x484BA2E: so_signal (so_scheduler.c:237)
-==280213==    by 0x10B299: test_sched_handler_21 (test_io.c:164)
-==280213==    by 0x484B6F3: startThread (so_scheduler.c:154)
-==280213==    by 0x4862608: start_thread (pthread_create.c:477)
-==280213==    by 0x499E292: clone (clone.S:95)
-==280213==  Address 0x4a971cc is 12 bytes inside a block of size 72 free'd
-==280213==    at 0x483CA3F: free (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
-==280213==    by 0x484BC8F: so_end (so_scheduler.c:281)
-==280213==    by 0x10B58B: test_sched_21 (test_io.c:228)
-==280213==    by 0x10962B: main (run_test.c:120)
-==280213==  Block was alloc'd at
-==280213==    at 0x483B7F3: malloc (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
-==280213==    by 0x484B7D7: so_fork (so_scheduler.c:182)
-==280213==    by 0x10B581: test_sched_21 (test_io.c:225)
-==280213==    by 0x10962B: main (run_test.c:120)
-==280213== 
-==280213== 
-==280213== HEAP SUMMARY:
-==280213==     in use at exit: 0 bytes in 0 blocks
-==280213==   total heap usage: 10 allocs, 10 frees, 161,360 bytes allocated
-==280213== 
-==280213== All heap blocks were freed -- no leaks are possible
-==280213== 
-==280213== For lists of detected and suppressed errors, rerun with: -s
-==280213== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 0 from 0)
+==290502== Memcheck, a memory error detector
+==290502== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==290502== Using Valgrind-3.15.0 and LibVEX; rerun with -h for copyright info
+==290502== Command: ./_test/run_test 20
+==290502== Parent PID: 290501
+==290502== 
+==290502== Thread 5:
+==290502== Invalid read of size 4
+==290502==    at 0x484BA1F: so_signal (so_scheduler.c:280)
+==290502==    by 0x10B299: test_sched_handler_21 (test_io.c:164)
+==290502==    by 0x484B6EF: startThread (so_scheduler.c:184)
+==290502==    by 0x4862608: start_thread (pthread_create.c:477)
+==290502==    by 0x499E292: clone (clone.S:95)
+==290502==  Address 0x4a971cc is 12 bytes inside a block of size 72 free'd
+==290502==    at 0x483CA3F: free (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
+==290502==    by 0x484BC76: so_end (so_scheduler.c:329)
+==290502==    by 0x10B58B: test_sched_21 (test_io.c:228)
+==290502==    by 0x10962B: main (run_test.c:120)
+==290502==  Block was alloc'd at
+==290502==    at 0x483B7F3: malloc (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
+==290502==    by 0x484B7D2: so_fork (so_scheduler.c:218)
+==290502==    by 0x10B581: test_sched_21 (test_io.c:225)
+==290502==    by 0x10962B: main (run_test.c:120)
+==290502== 
+==290502== 
+==290502== HEAP SUMMARY:
+==290502==     in use at exit: 0 bytes in 0 blocks
+==290502==   total heap usage: 10 allocs, 10 frees, 161,360 bytes allocated
+==290502== 
+==290502== All heap blocks were freed -- no leaks are possible
+==290502== 
+==290502== For lists of detected and suppressed errors, rerun with: -s
+==290502== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 0 from 0)

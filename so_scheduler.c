@@ -16,6 +16,7 @@
 
 #define NO_IO -1
 
+// Functie ajutatoare din laboratoare
 #define DIE(assertion, call_description)  \
 	do                                    \
 	{                                     \
@@ -28,6 +29,7 @@
 		}                                 \
 	} while (0)
 
+// Structura pnetru a defini un thread
 typedef struct
 {
 	so_handler *handler;
@@ -39,6 +41,7 @@ typedef struct
 	unsigned int io;
 } my_thread;
 
+// Structura pentru a defini Scheduler-ul
 typedef struct
 {
 	unsigned int time;
@@ -54,11 +57,15 @@ typedef struct
 
 static so_scheduler scheduler;
 
+// Adauga inca un thread in lista de threaduri
 void updateList(my_thread *thr)
 {
 	scheduler.threads[scheduler.thrNo++] = thr;
 }
 
+// Adauga un thread in coada. Coada contine elementele sortate
+// descrescator.
+// Seteaza statusul ca READY.
 void updateQueue(my_thread *thr)
 {
 	unsigned int i = 0, j;
@@ -75,7 +82,9 @@ void updateQueue(my_thread *thr)
 	scheduler.queue[i] = thr;
 }
 
-void removeTop()
+// Sterg primul element din coada si devine thread-ul curent
+// care va rula urmatoarea comanda.
+void removeTop(void)
 {
 	if (scheduler.qSize < 1)
 		return;
@@ -91,7 +100,10 @@ void removeTop()
 	scheduler.queue[scheduler.qSize] = NULL;
 }
 
-int chooseThread()
+// Alege un thread-ul care va rula in continuare.
+// Daca Thread-ul curent e WAITING sau TERMINATED
+// atunci il schimb si nu il bag in coada.
+int chooseThread(void)
 {
 	my_thread *thr = scheduler.queue[0];
 	my_thread *current = scheduler.currentThread;
@@ -103,6 +115,10 @@ int chooseThread()
 		return 1;
 	}
 
+	// Daca este un thread cu o prioritate mai mare
+	// sau cu aceeasi prioritate, iar thread-ul curent
+	// si-a terminat cuanta de timp, atunci il bag in coada
+	// si modific thread-ul care va rula.
 	if (current->priority < thr->priority ||
 		(current->priority == thr->priority &&
 		 current->runningTime <= 0))
@@ -116,47 +132,64 @@ int chooseThread()
 	return 0;
 }
 
-void runCurrentThread()
+// Ruleaza thread-ul curent.
+// Scoate thread-ul din starea d ewaiting a semaforului.
+void runCurrentThread(int time)
 {
 	my_thread *thr = scheduler.currentThread;
 
-	thr->runningTime = scheduler.time;
+	thr->runningTime = time;
 	thr->status = RUNNING;
 
 	int rc = sem_post(&thr->alarm);
+
 	DIE(rc < 0, "Error on waking up thread");
 }
 
-void schedule()
+// Cauta urmatorul thread care va rula.
+void schedule(void)
 {
 	my_thread *previousThread = scheduler.currentThread;
 
-	if (scheduler.currentThread == NULL)
+	if (scheduler.currentThread == NULL) // Prima rulare
 		removeTop();
 	else if ((previousThread && scheduler.qSize == 0) || !chooseThread())
 	{
+		// Daca nu avem niciun thread, rulam acelasi thread.
+		// Daca timpul a expirat, il resetez.
 		if (previousThread->runningTime <= 0)
 		{
 			previousThread->runningTime = scheduler.time;
 		}
+
+		runCurrentThread(previousThread->runningTime);
+		return;
 	}
 
-	runCurrentThread();
+	// Rulez thread-ul curent.
+	runCurrentThread(scheduler.time);
 }
 
-void startThread(void *args)
+// Functia care ruleaza la pornirea thread-ului.
+// Trec thread-ul in waiting, folosind semaforul.
+// Rulez handler-ul si setez statusul ca TERMINATED.
+void *startThread(void *args)
 {
 	my_thread *thr = (my_thread *)args;
 
 	int rc = sem_wait(&thr->alarm);
+
 	DIE(rc < 0, "Error on waiting semaphore");
 
 	thr->handler(thr->priority);
 	thr->status = TERMINATED;
 
 	schedule();
+
+	return NULL;
 }
 
+// Initializez scheduler-ul.
 int so_init(unsigned int time_quantum, unsigned int io)
 {
 	if (io > SO_MAX_NUM_EVENTS || time_quantum == 0 || scheduler.init == 1)
@@ -174,6 +207,9 @@ int so_init(unsigned int time_quantum, unsigned int io)
 	return SUCCESS;
 }
 
+// Creez un nou thread, il bag in lista si in coada.
+// Daca nu ruleaza niciun thread, atunci rulez trebuie sa caut
+// unul. Daca ruleaza un thread, atunci rulez so_exec().
 tid_t so_fork(so_handler *func, unsigned int priority)
 {
 	if (priority > SO_MAX_PRIO || !func)
@@ -189,8 +225,8 @@ tid_t so_fork(so_handler *func, unsigned int priority)
 	thr->io = NO_IO;
 
 	int rc = sem_init(&thr->alarm, 0, 0);
-	DIE(rc < 0, "Error on creating semaphore");
 
+	DIE(rc < 0, "Error on creating semaphore");
 	rc = pthread_create(&thr->id, NULL, (void *)startThread, (void *)thr);
 	DIE(rc < 0, "Error on creating new thread");
 
@@ -205,6 +241,9 @@ tid_t so_fork(so_handler *func, unsigned int priority)
 	return thr->id;
 }
 
+// Trec un thread in starea de WAITING.
+// Setez semnalul IO pe care trebuie sa il primeasca ca fiind
+// argumentul functiei.
 int so_wait(unsigned int io)
 {
 	if (io >= scheduler.io)
@@ -217,11 +256,15 @@ int so_wait(unsigned int io)
 	schedule();
 
 	int rc = sem_wait(&thr->alarm);
+
 	DIE(rc < 0, "Error on putting thread in wait");
 
 	return SUCCESS;
 }
 
+// Parcurg lista cu toate thread-urile si le scot din starea WAITING.
+// Pun thread-ul curent in starea waiting a semaforului, deoarece
+// altfel acesta se va pierde.
 int so_signal(unsigned int io)
 {
 	if (io >= scheduler.io)
@@ -245,11 +288,14 @@ int so_signal(unsigned int io)
 	schedule();
 
 	int rc = sem_wait(&scheduler.currentThread->alarm);
+
 	DIE(rc < 0, "Error on putting thread in wait");
 
 	return nr;
 }
 
+// Scad cuanta d etimp si fac schedule() pentru a vedea daca este un alt
+// thread favorit.
 void so_exec(void)
 {
 	my_thread *runningThread = scheduler.currentThread;
@@ -258,9 +304,11 @@ void so_exec(void)
 	schedule();
 
 	int rc = sem_wait(&runningThread->alarm);
+
 	DIE(rc < 0, "Error on puting thread in waiting state");
 }
 
+// Distrug toate semafoarele si thread-urile. Eliberez memoria.
 void so_end(void)
 {
 	if (scheduler.init == 0)
