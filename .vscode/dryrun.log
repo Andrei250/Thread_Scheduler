@@ -1,0 +1,6 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/student/so/assignments/4-scheduler/checker-lin'
+gcc -fPIC -Wextra -Wall -g -o so_scheduler.o -c so_scheduler.c
+gcc -fPIC -Wextra -Wall -g -shared -o libscheduler.so so_scheduler.o
+make: Leaving directory '/home/student/so/assignments/4-scheduler/checker-lin'
+ 

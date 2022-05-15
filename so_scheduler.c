@@ -14,26 +14,33 @@
 #define SUCCESS 0
 #define THREADS_NO 9999
 
-#define DIE(assertion, call_description)				\
-	do {												\
-		if (assertion) {								\
-			fprintf(stderr, "(%s, %d): ",				\
-					__FILE__, __LINE__);				\
-			perror(call_description);					\
-			exit(EXIT_FAILURE);							\
-		}												\
+#define NO_IO -1
+
+#define DIE(assertion, call_description)  \
+	do                                    \
+	{                                     \
+		if (assertion)                    \
+		{                                 \
+			fprintf(stderr, "(%s, %d): ", \
+					__FILE__, __LINE__);  \
+			perror(call_description);     \
+			exit(EXIT_FAILURE);           \
+		}                                 \
 	} while (0)
 
-typedef struct {
+typedef struct
+{
 	so_handler *handler;
 	int priority;
 	int status;
 	int runningTime;
 	tid_t id;
 	sem_t alarm;
+	unsigned int io;
 } my_thread;
 
-typedef struct {
+typedef struct
+{
 	unsigned int time;
 	unsigned int io;
 	unsigned short init;
@@ -59,14 +66,13 @@ void updateQueue(my_thread *thr)
 	for (; i < scheduler.qSize; ++i)
 		if (thr->priority > scheduler.queue[i]->priority)
 			break;
-		
-	
+
 	for (j = scheduler.qSize; j > i; j--)
 		scheduler.queue[j] = scheduler.queue[j - 1];
 
+	thr->status = READY;
 	scheduler.qSize++;
 	scheduler.queue[i] = thr;
-	scheduler.queue[i]->status = READY;
 }
 
 void removeTop()
@@ -91,24 +97,27 @@ int chooseThread()
 	my_thread *current = scheduler.currentThread;
 
 	if (current->status == WAITING ||
-		current->status == TERMINATED) {
-			removeTop();
-			return 1;
-		}
+		current->status == TERMINATED)
+	{
+		removeTop();
+		return 1;
+	}
 
 	if (current->priority < thr->priority ||
 		(current->priority == thr->priority &&
-		current->runningTime <= 0)) {
+		 current->runningTime <= 0))
+	{
 		removeTop();
 		updateQueue(current);
-		
+
 		return 1;
 	}
-	
+
 	return 0;
 }
 
-void runCurrentThread() {
+void runCurrentThread()
+{
 	my_thread *thr = scheduler.currentThread;
 
 	thr->runningTime = scheduler.time;
@@ -124,8 +133,10 @@ void schedule()
 
 	if (scheduler.currentThread == NULL)
 		removeTop();
-	else if ((previousThread && scheduler.qSize == 0 ) || !chooseThread()) {
-		if (previousThread->runningTime <= 0) {
+	else if ((previousThread && scheduler.qSize == 0) || !chooseThread())
+	{
+		if (previousThread->runningTime <= 0)
+		{
 			previousThread->runningTime = scheduler.time;
 		}
 	}
@@ -135,7 +146,7 @@ void schedule()
 
 void startThread(void *args)
 {
-	my_thread *thr = (my_thread *) args;
+	my_thread *thr = (my_thread *)args;
 
 	int rc = sem_wait(&thr->alarm);
 	DIE(rc < 0, "Error on waiting semaphore");
@@ -157,8 +168,8 @@ int so_init(unsigned int time_quantum, unsigned int io)
 	scheduler.thrNo = 0;
 	scheduler.qSize = 0;
 	scheduler.currentThread = NULL;
-	scheduler.threads = (my_thread **) malloc(sizeof(my_thread *) * THREADS_NO);
-	scheduler.queue = (my_thread **) malloc(sizeof(my_thread *) * THREADS_NO);
+	scheduler.threads = (my_thread **)malloc(sizeof(my_thread *) * THREADS_NO);
+	scheduler.queue = (my_thread **)malloc(sizeof(my_thread *) * THREADS_NO);
 
 	return SUCCESS;
 }
@@ -168,18 +179,19 @@ tid_t so_fork(so_handler *func, unsigned int priority)
 	if (priority > SO_MAX_PRIO || !func)
 		return INVALID_TID;
 
-	my_thread *thr = (my_thread *) malloc(sizeof(my_thread));
+	my_thread *thr = (my_thread *)malloc(sizeof(my_thread));
 
 	thr->priority = priority;
 	thr->handler = func;
 	thr->status = NEW;
 	thr->id = INVALID_TID;
 	thr->runningTime = scheduler.time;
+	thr->io = NO_IO;
 
 	int rc = sem_init(&thr->alarm, 0, 0);
 	DIE(rc < 0, "Error on creating semaphore");
 
-	rc = pthread_create(&thr->id, NULL, (void *) startThread, (void *) thr);
+	rc = pthread_create(&thr->id, NULL, (void *)startThread, (void *)thr);
 	DIE(rc < 0, "Error on creating new thread");
 
 	updateQueue(thr);
@@ -198,10 +210,13 @@ int so_wait(unsigned int io)
 	if (io >= scheduler.io)
 		return ERROR;
 
-	scheduler.currentThread->status = WAITING;
+	my_thread *thr = scheduler.currentThread;
+
+	thr->status = WAITING;
+	thr->io = io;
 	schedule();
 
-	int rc = sem_wait(&scheduler.currentThread->alarm);
+	int rc = sem_wait(&thr->alarm);
 	DIE(rc < 0, "Error on putting thread in wait");
 
 	return SUCCESS;
@@ -209,7 +224,30 @@ int so_wait(unsigned int io)
 
 int so_signal(unsigned int io)
 {
-	return io >= scheduler.io ? ERROR : 0;
+	if (io >= scheduler.io)
+		return ERROR;
+
+	int nr = 0;
+	unsigned int i = 0;
+
+	for (; i < scheduler.thrNo; ++i)
+	{
+		my_thread *thr = scheduler.threads[i];
+
+		if (thr->status == WAITING && thr->io == io)
+		{
+			thr->io = NO_IO;
+			updateQueue(thr);
+			nr++;
+		}
+	}
+
+	schedule();
+
+	int rc = sem_wait(&scheduler.currentThread->alarm);
+	DIE(rc < 0, "Error on putting thread in wait");
+
+	return nr;
 }
 
 void so_exec(void)
@@ -232,7 +270,8 @@ void so_end(void)
 	unsigned int i = 0;
 	int rc;
 
-	for (i = 0; i < scheduler.thrNo; ++i) {
+	for (i = 0; i < scheduler.thrNo; ++i)
+	{
 		rc = pthread_join(scheduler.threads[i]->id, NULL);
 		DIE(rc < 0, "Can't join threads");
 
